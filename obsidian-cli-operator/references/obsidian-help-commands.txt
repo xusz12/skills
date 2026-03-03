@@ -1,0 +1,2 @@
+  commands              List available command IDs
+    filter=<prefix>     - Filter by ID prefix

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Daily News Aggregator"
+  short_description: "Merge today's news files, dedupe URLs, and classify into 4 sections"
+  default_prompt: "Find today's yyyy-mm-dd-hh-mm_news.md files in the current project folder, merge them into one yyyy-mm-dd_news_summary.md file, deduplicate globally by exact URL, then classify all deduplicated news into 政治、经济、科技、其他 sections."

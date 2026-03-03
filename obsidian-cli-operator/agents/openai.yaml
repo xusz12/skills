@@ -1,0 +1,7 @@
+interface:
+  display_name: "Obsidian CLI Operator"
+  short_description: "Run Obsidian vault and note commands safely via CLI"
+  default_prompt: "Use $obsidian-cli-operator to execute Obsidian CLI commands for notes, tasks, search, and vault management."
+
+policy:
+  allow_implicit_invocation: true
