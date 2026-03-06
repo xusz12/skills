@@ -1,11 +1,11 @@
 ---
 name: daily-news-aggregator
-description: Aggregate same-day news markdown files in the current project folder into one summary markdown file, deduplicate stories by exact URL, and classify deduplicated news into 政治/经济/科技/其他 sections.
+description: Aggregate same-day news markdown files in the current project folder into one summary markdown file, deduplicate stories by exact URL, and keep deduplicated stories in their original groups.
 ---
 
 # Daily News Aggregator
 
-Use this skill to merge today's news markdown files, remove duplicates by URL while preserving first-seen order, then classify deduplicated news into four sections: 政治、经济、科技、其他.
+Use this skill to merge today's news markdown files, remove duplicates by URL while preserving first-seen order, then keep deduplicated news in the original input groups (for example: technology/business/world/...).
 
 ## Workflow
 
@@ -20,12 +20,13 @@ Use this skill to merge today's news markdown files, remove duplicates by URL wh
 3. Deduplicate globally by exact URL string:
    - Keep first occurrence
    - Drop later duplicates even if title/time differs
-4. Classify deduplicated entries into four categories:
-   - Categories: 政治、经济、科技、其他
-   - Preserve first-seen order within each category
+4. Keep deduplicated entries in original groups:
+   - Parse section headers in input files: `## <group>`
+   - If the same URL appears in multiple groups, keep it in the first-seen group
+   - Preserve first-seen order within each group
 5. Write one output file:
    - File name: `yyyy-mm-dd_news_summary.md`
-   - Output structure: four category sections in fixed order: 政治、经济、科技、其他
+   - Output structure: dynamic group sections in first-seen order
    - Do not print full markdown content in chat; only report path and stats
 
 ## Script
@@ -50,24 +51,24 @@ Useful options:
 - 去重前条目总数：M
 - 被去重条目数：D
 - 去重后条目总数：K
-- 分类统计：政治 P 条，经济 E 条，科技 T 条，其他 O 条
+- 分组统计：technology T 条，business B 条，world W 条，...
 - 生成时间：YYYY-MM-DD HH:MM:SS
 - 扫描文件数：N
 
 ## daily_news_summary (YYYY-MM-DD)
-### 政治（P）
+### technology（T）
 ### **中文标题**
 - 发布时间：...
 - 链接：(https://...)
-### 经济（E）
+### business（B）
 ### **中文标题**
 - 发布时间：...
 - 链接：(https://...)
-### 科技（T）
+### world（W）
 ### **中文标题**
 - 发布时间：...
 - 链接：(https://...)
-### 其他（O）
+### 其他来源分组（...）
 ### **中文标题**
 - 发布时间：...
 - 链接：(https://...)

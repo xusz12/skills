@@ -1,0 +1,4 @@
+interface:
+  display_name: "Get News"
+  short_description: "Handle branch1/branch2 fetch, summary refresh, and n3 delta generation"
+  default_prompt: "Run getNews. If no today n1 file exists, use branch1: fetch n1, build n2 summary, then generate n3 as n2 minus oldDay-n2. Otherwise use branch2: fetch a new n1, generate n3 as latest n1 minus current n2, then refresh n2."
