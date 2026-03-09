@@ -1,6 +1,6 @@
 ---
 name: getnews
-description: "Programmatic daily news entry skill. In the project folder, branch1 runs on first fetch of the day: generate n1, build n2, then compute n3 as `n2 \\ oldDay-n2`. Branch2 runs on non-first fetches: generate a new n1, compute n3 as `latest n1 \\ current n2`, then refresh n2."
+description: "Programmatic daily news entry skill. In the project folder, branch1 runs on first fetch of the day: generate n1, build n2, compute n3 as `n2 \\ oldDay-n2`, then set n4=n3. Branch2 runs on non-first fetches: generate a new n1, compute n3 as `latest n1 \\ current n2`, refresh n2, then update n4 as `old n4 + new n3`."
 ---
 
 # getNews
@@ -13,6 +13,9 @@ description: "Programmatic daily news entry skill. In the project folder, branch
 - n3: delta news set for this run. Output filename `yyyy-mm-dd_news_delta.md`.
   - branch1: `n2 \\ oldDay-n2` by exact URL.
   - branch2: `latest n1 \\ current n2` by exact URL.
+- n4: fresh-news summary set for the day, filename `yyyy-mm-dd_news_freshSummary.md`.
+  - branch1: `n4 = n3`.
+  - branch2: `n4 = old n4 + new n3`.
 
 ## Branch1 Workflow (First-Run Branch)
 
@@ -20,7 +23,7 @@ description: "Programmatic daily news entry skill. In the project folder, branch
 2. Determine local `today` as `YYYY-MM-DD`.
 3. Scan `*_news.md` and keep only strict n1 pattern `yyyy-mm-dd-hh-mm_news.md` with date prefix `today`.
 4. Branch decision:
-   - If no same-day n1 exists, this is branch1 (first run today). Continue with steps 5-7.
+   - If no same-day n1 exists, this is branch1 (first run today). Continue with steps 5-8.
    - If same-day n1 exists, branch selection should move to branch2 instead of using this flow.
 5. Generate n1 by executing `reuters-multi-section-top10-zh-devtools` in current folder.
 6. Generate n2 by executing:
@@ -35,6 +38,12 @@ python3 /Users/x/.codex/skills/daily-news-aggregator/scripts/merge_daily_news.py
 python3 /Users/x/.codex/skills/getnews/scripts/build_n3_delta.py --dir "$PWD"
 ```
 
+8. Generate n4 by setting `n4 = n3`:
+
+```bash
+python3 /Users/x/.codex/skills/getnews/scripts/build_n4_fresh_summary.py --dir "$PWD" --mode branch1
+```
+
 ## Branch2 Workflow (Non-First-Run Branch)
 
 1. Use current working directory as project folder.
@@ -42,7 +51,7 @@ python3 /Users/x/.codex/skills/getnews/scripts/build_n3_delta.py --dir "$PWD"
 3. Scan `*_news.md` and keep only strict n1 pattern `yyyy-mm-dd-hh-mm_news.md` with date prefix `today`.
 4. Branch decision:
    - If same-day n1 exists, this is branch2.
-   - Branch2 assumes the current folder already contains today's n2 (`yyyy-mm-dd_news_summary.md`) and n3 (`yyyy-mm-dd_news_delta.md`).
+   - Branch2 assumes the current folder already contains today's n2 (`yyyy-mm-dd_news_summary.md`), n3 (`yyyy-mm-dd_news_delta.md`), and n4 (`yyyy-mm-dd_news_freshSummary.md`).
 5. Generate a new n1 by executing `reuters-multi-section-top10-zh-devtools` in current folder.
 6. Generate n3 by comparing the newest same-day n1 against the current n2:
 
@@ -54,6 +63,12 @@ python3 /Users/x/.codex/skills/getnews/scripts/build_n3_delta.py --dir "$PWD" --
 
 ```bash
 python3 /Users/x/.codex/skills/daily-news-aggregator/scripts/merge_daily_news.py --dir "$PWD"
+```
+
+8. Generate n4 after the new n2 has been written:
+
+```bash
+python3 /Users/x/.codex/skills/getnews/scripts/build_n4_fresh_summary.py --dir "$PWD" --mode branch2
 ```
 
 ## n3 Rules
@@ -69,10 +84,24 @@ python3 /Users/x/.codex/skills/daily-news-aggregator/scripts/merge_daily_news.py
 4. Keep n3 output structure aligned with n2 style: group header + title/time/link blocks.
 5. In branch2, `yyyy-mm-dd_news_delta.md` is overwritten on each run so it always represents the newest incremental fetch.
 
+## n4 Rules
+
+1. Output filename is `yyyy-mm-dd_news_freshSummary.md`.
+2. Keep n4 output structure aligned with n3 style: group header + title/time/link blocks.
+3. branch1:
+   - Set `n4 = n3`.
+4. branch2:
+   - Update `n4 = old n4 + new n3`.
+   - Do not perform URL deduplication during the append step.
+   - Preserve existing n4 order first, then append new n3 items.
+   - When a group already exists in n4, append the new n3 items to that same group; otherwise add a new group at the end.
+
 ## Execution Notes
 
 - Execute steps sequentially.
-- If Reuters step fails, stop; do not run n2/n3.
-- In branch1, if n2 generation fails, stop; do not run n3.
+- If Reuters step fails, stop; do not run n2/n3/n4.
+- In branch1, if n2 generation fails, stop; do not run n3/n4.
 - In branch2, generate n3 before refreshing n2; otherwise `latest n1 \\ current n2` will collapse to empty.
+- In branch1, generate n4 after n3 so `n4 = n3`.
+- In branch2, generate n4 after refreshing n2 so n4 records the new run's incremental n3 while n2 has already been updated.
 - Do not print full markdown body in chat; report generated file paths and key stats only.
