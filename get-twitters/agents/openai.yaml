@@ -1,0 +1,4 @@
+interface:
+  display_name: "Get Twitters"
+  short_description: "Fetch tweets from X accounts via Twitter CLI"
+  default_prompt: "Use $get-twitters to fetch today's tweets from specific X accounts and format them in Markdown."
