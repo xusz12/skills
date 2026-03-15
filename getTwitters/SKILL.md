@@ -13,7 +13,7 @@ Default behavior:
 - Date window: today in `Asia/Shanghai`
 - Translation: enabled (non-Chinese -> Chinese)
 - Author guard: enabled (filter mixed and ad posts by handle)
-- Default accounts: `ilyasut`, `mingchikuo`, `WaylandZhang`, `ivanalog_com`, `fxtrader`, `dongxi_nlp`, `jakevin7`
+- Default accounts: `ilyasut`, `mingchikuo`, `WaylandZhang`, `ivanalog_com`, `jakevin7`
 
 ## Workflow
 
@@ -71,7 +71,7 @@ python3 scripts/export_tweets.py -n 20
 ```
 
 Common options:
-- `--accounts <a> <b> ...` (optional; default: built-in 7 accounts)
+- `--accounts <a> <b> ...` (optional; default: built-in 5 accounts)
 - `--date YYYY-MM-DD` (default: today in timezone)
 - `--timezone Asia/Shanghai`
 - `-n, --limit 20`

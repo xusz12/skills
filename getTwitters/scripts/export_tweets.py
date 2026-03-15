@@ -26,8 +26,6 @@ DEFAULT_ACCOUNTS = [
     "mingchikuo",
     "WaylandZhang",
     "ivanalog_com",
-    "fxtrader",
-    "dongxi_nlp",
     "jakevin7",
 ]
 
@@ -43,7 +41,7 @@ def parse_args() -> argparse.Namespace:
         "--accounts",
         nargs="+",
         default=DEFAULT_ACCOUNTS,
-        help="One or more account handles. Default: built-in 7 accounts.",
+        help="One or more account handles. Default: built-in 5 accounts.",
     )
     parser.add_argument(
         "--date",
