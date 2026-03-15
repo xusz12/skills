@@ -1,4 +1,4 @@
 interface:
   display_name: "Get Twitters"
-  short_description: "Fetch tweets from X accounts via Twitter CLI"
-  default_prompt: "Use $get-twitters to fetch today's tweets from specific X accounts and format them in Markdown."
+  short_description: "Fetch tweets and export Chinese markdown digest"
+  default_prompt: "Use $get-Twitters to fetch tweets for my accounts, filter mixed/ad posts by handle, classify 原创/引用/转推, translate non-Chinese to Chinese, and export markdown for today in Asia/Shanghai."

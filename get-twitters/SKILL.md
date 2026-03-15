@@ -1,50 +1,86 @@
 ---
-name: get-twitters
-description: Fetch tweets from specific X/Twitter accounts with the local `twitter` CLI and format the results for the user. Use when the user asks to collect recent or same-day posts from one or more accounts, filter out retweets or replies, convert timestamps to a requested timezone, translate non-Chinese tweets into Chinese, or present the results as ordered Markdown digests with tweet links.
+name: get-Twitters
+description: Fetch recent posts from one or more X/Twitter accounts with the local `twitter` CLI, classify each post as 原创/引用/转推, translate non-Chinese text into Chinese, and export a Markdown digest.
 ---
 
 # Get Twitters
 
 ## Overview
 
-Use the local `twitter` CLI to collect posts from specific accounts, filter them to the user’s requested date window, and render the output in Markdown.
+Use this skill when the user asks to fetch tweets from one or more X/Twitter accounts, keep posts in a target date window, and export a Markdown file.
 
-Prefer this skill when the user cares about exact tweet recency, account order, timezone-normalized times, and a clean per-account report.
+Default behavior:
+- Date window: today in `Asia/Shanghai`
+- Translation: enabled (non-Chinese -> Chinese)
+- Author guard: enabled (filter mixed and ad posts by handle)
+- Default accounts: `ilyasut`, `mingchikuo`, `WaylandZhang`, `ivanalog_com`, `fxtrader`, `dongxi_nlp`, `jakevin7`
 
 ## Workflow
 
-1. Confirm the CLI is available with `twitter --help` if the environment is uncertain.
-2. Fetch recent posts per handle with `twitter user-posts <handle> -n 30 --json`.
-3. Increase `-n` to `50` only if the first fetch may not cover the requested date window.
-4. Parse each post's `createdAt`, convert it to the requested timezone, and keep only posts inside the requested time range.
-5. Exclude pure retweets by dropping items where `isRetweet` is `true`.
-6. Exclude replies when the user asks for timeline posts only.
-7. Build the canonical tweet link as `https://x.com/<handle>/status/<tweet_id>`.
-8. If a kept post is not in Chinese, translate the full visible tweet text into Chinese.
-9. Preserve URLs, `@mentions`, product names, and line breaks in the translated output.
-10. Render the final result in the user’s requested account order.
+1. Validate CLI availability if uncertain:
 
-## Filtering Rules
+```bash
+twitter --help
+```
 
-- Treat the requested timezone as authoritative. If the user says "北京时间", use `Asia/Shanghai`.
-- When the user says "today", interpret it using the requested timezone, not UTC.
-- If the CLI output mixes in posts from unrelated accounts, keep only items whose author handle matches the requested account.
-- If reply detection is ambiguous, be conservative and exclude clear reply-shaped posts rather than risking false positives.
-- If a kept post has an obviously truncated body and completeness matters, try `twitter tweet <tweet_id> --json` once and use the best available text.
+2. Fetch posts per handle:
+
+```bash
+twitter user-posts <handle> -n <N> --json --full-text
+```
+
+3. Convert timestamps to requested timezone and keep only posts in the target date.
+
+4. Classify each kept post:
+- `转推`: `isRetweet == true`
+- `引用`: has `quotedTweet` and not retweet
+- `原创`: neither retweet nor quote
+
+5. Translate non-Chinese text to Chinese before writing Markdown.
+
+6. Render Markdown in requested account order.
 
 ## Output Format
 
-- Preserve the account order requested by the user.
-- Group output by account unless the user explicitly asks for a merged timeline.
-- Use Markdown.
-- For each kept tweet, include only the fields the user asked for. Common fields are:
-  - `发布时间（北京时间）`
-  - `推文链接`
-  - `内容`
-- If an account has no matching posts, write `今日无符合条件的推文。`
+- Group by account heading:
+
+```markdown
+## <display_name> （@<handle>）
+```
+
+- Per post:
+
+```markdown
+##### <index>. [原创|引用|转推](tweet_url)发布时间（北京时间）：YYYY-MM-DD HH:mm
+```
+
+- Post body uses `text` fenced code block.
+- Quote posts add both `引用` and `被引用` blocks.
+- If an account has no matching posts for the date, output:
+
+```markdown
+今日无符合条件的推文。
+```
+
+## Script
+
+Use the bundled script from this skill directory:
+
+```bash
+python3 scripts/export_tweets.py -n 20
+```
+
+Common options:
+- `--accounts <a> <b> ...` (optional; default: built-in 7 accounts)
+- `--date YYYY-MM-DD` (default: today in timezone)
+- `--timezone Asia/Shanghai`
+- `-n, --limit 20`
+- `--output tweets_YYYY-MM-DD.md`
+- `--disable-translation`
+- `--author-guard` (enable safety check; default)
+- `--no-author-guard` (disable safety check)
 
 ## Notes
 
-- The `twitter` CLI may return truncated text for some posts. Note that limitation in the response if it affects completeness.
-- Network access to `x.com` may require running the CLI outside the sandbox.
-- If the user refines the field list or account order after the first run, rerun the fetch and regenerate the final Markdown instead of manually editing stale output.
+- Run twitter fetch commands outside sandbox when environment requires browser cookies or Keychain access.
+- If translation fails, keep original text and continue.
