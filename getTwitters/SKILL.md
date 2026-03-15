@@ -1,5 +1,5 @@
 ---
-name: get-Twitters
+name: getTwitters
 description: Fetch recent posts from one or more X/Twitter accounts with the local `twitter` CLI, classify each post as 原创/引用/转推, translate non-Chinese text into Chinese, and export a Markdown digest.
 ---
 
