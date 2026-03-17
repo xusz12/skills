@@ -24,9 +24,6 @@ URL_ONLY_RE = re.compile(r"^(https?://\S+\s*)+$")
 DEFAULT_ACCOUNTS = [
     "ilyasut",
     "mingchikuo",
-    "WaylandZhang",
-    "ivanalog_com",
-    "jakevin7",
 ]
 
 
@@ -41,7 +38,7 @@ def parse_args() -> argparse.Namespace:
         "--accounts",
         nargs="+",
         default=DEFAULT_ACCOUNTS,
-        help="One or more account handles. Default: built-in 5 accounts.",
+        help="One or more account handles. Default: built-in 2 accounts.",
     )
     parser.add_argument(
         "--date",
