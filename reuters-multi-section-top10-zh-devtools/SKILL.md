@@ -27,11 +27,13 @@ Use all supported URLs as defaults unless the user provides a custom URL list.
 2. Process each URL sequentially in visible-browser mode (no parallel fetch):
    - Run the Chrome DevTools session with a visible browser window (browser UI enabled).
    - Create one tab with `mcp__chrome-devtools__new_page` for the first URL, then use `mcp__chrome-devtools__navigate_page` for each remaining URL in the same tab.
-   - Capture structure with `mcp__chrome-devtools__take_snapshot` and confirm a `main` content area.
-   - Run extraction script via `mcp__chrome-devtools__evaluate_script`.
-   - If fewer than 10 items, click a load-more control once (for example `Load more articles` or `LOAD MORE`) and re-run script.
-   - Keep first 10 valid items in page order for that URL.
-   - Translate each title to Chinese.
+   - Run extraction script directly via `mcp__chrome-devtools__evaluate_script` — do **not** call `take_snapshot` upfront.
+   - Only call `mcp__chrome-devtools__take_snapshot` when any of the following conditions are met:
+     - Script returns `{ error: 'main_not_found' }` (page may not have finished rendering; use snapshot to verify DOM state before retrying)
+     - Script returns fewer than 3 items (determine whether content is genuinely sparse or DOM is not yet loaded)
+     - Page structure appears abnormal (use snapshot to diagnose before retrying or skipping)
+   - Keep first 10 valid items currently available on the page, in page order for that URL.
+   - Store raw extraction results only at this stage: `section`, `time`, original `title`, and absolute `url`.
 3. Derive section key from URL path:
    - `.../world/china/` -> `china`
    - `.../world/` -> `world`
@@ -40,15 +42,19 @@ Use all supported URLs as defaults unless the user provides a custom URL list.
    - `https://www.bbc.com/news` -> `bbc_news`
    - `https://arstechnica.com/` -> `arstechnica`
    - `https://techcrunch.com/latest/` -> `techcrunch_latest`
-4. Before export, deduplicate globally across all collected stories using absolute URL as unique key:
+4. After all URLs have been processed, deduplicate globally across all collected stories using absolute URL as unique key:
    - Merge all section results in collection order (URL list order + DOM order).
    - Keep the first occurrence for each URL and drop later duplicates.
    - Preserve remaining item order.
-5. Export Markdown only to the current project folder (current working directory):
+5. Translate the deduplicated titles in one batch:
+   - Translate only after global URL deduplication is complete.
+   - Preserve item order and section assignment.
+   - Keep `time` and `url` unchanged; only replace the original title text with natural Chinese.
+6. Export Markdown only to the current project folder (current working directory):
    - Write output to a file named `yyyy-mm-dd-hh-mm_news.md` (example: `2026-02-27-14-35_news.md`).
    - Do not print the full Markdown content in chat.
    - Only report completion and exported file path.
-6. Before finishing the skill, close Chrome DevTools session:
+7. Before finishing the skill, close Chrome DevTools session:
    - Close opened pages with `mcp__chrome-devtools__list_pages` + `mcp__chrome-devtools__close_page` when possible.
    - Ensure DevTools process is closed (for example: `pkill -f chrome-devtools-mcp`) before final completion.
 
@@ -62,6 +68,7 @@ Use all supported URLs as defaults unless the user provides a custom URL list.
 ```
 
 Use grouped section blocks in the file. No table output.
+Keep section grouping derived during extraction even though title translation happens later in a single batch.
 
 ## Extraction Script Pattern (Domain-Aware)
 
@@ -263,12 +270,14 @@ Use this `evaluate_script` pattern. It selects a site-specific extraction path (
 ## Quality Checks
 
 1. Fetch top 10 for every URL in the input list, not just one URL.
-2. Before global URL deduplication, collect up to 10 items per URL (or fewer if the page still has fewer after one load-more attempt).
+2. Before global URL deduplication, collect up to 10 items per URL from the content directly available on the page.
 3. After global URL deduplication, fewer than 10 items in a section is acceptable.
-4. Ensure URL is absolute and belongs to the current target site (`reuters.com`, `bbc.com`, `arstechnica.com`, or `techcrunch.com`).
-5. Exclude navigation links, ads, and footer links.
-6. Keep timestamps exactly as shown on page (for Ars, prefer `<time datetime>` when available; for BBC/TechCrunch missing values use `页面未显示`).
-7. Translate all returned titles into natural Chinese without changing factual meaning.
-8. Before exporting, deduplicate all collected stories globally by absolute URL and preserve first occurrence order.
-9. Export Markdown file to the current project folder only using the filename format `yyyy-mm-dd-hh-mm_news.md`, and do not print full Markdown content in chat.
-10. Ensure Chrome DevTools session is closed before finishing.
+4. Do not call `take_snapshot` unless a trigger condition is met (see Workflow step 2). On normal pages this call is unnecessary and wastes time.
+5. Ensure URL is absolute and belongs to the current target site (`reuters.com`, `bbc.com`, `arstechnica.com`, or `techcrunch.com`).
+6. Exclude navigation links, ads, and footer links.
+7. Keep timestamps exactly as shown on page (for Ars, prefer `<time datetime>` when available; for BBC/TechCrunch missing values use `页面未显示`).
+8. Before translation, deduplicate all collected stories globally by absolute URL and preserve first occurrence order.
+9. Batch-translate only the deduplicated titles into natural Chinese without changing factual meaning.
+10. Do not translate items that will later be dropped by global URL deduplication.
+11. Export Markdown file to the current project folder only using the filename format `yyyy-mm-dd-hh-mm_news.md`, and do not print full Markdown content in chat.
+12. Ensure Chrome DevTools session is closed before finishing.
