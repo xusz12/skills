@@ -6,7 +6,7 @@ description: Extract news data with browser-use using a deterministic pipeline a
 # Browser-use News Extractor
 
 Run a low-decision, repeatable pipeline:
-1. Prepare browser session (`close -> open -> wait main`)
+1. Prepare browser session (`open -> wait main`)
 2. Extract raw rows from a site adapter (`eval` JavaScript)
 3. Normalize and deduplicate by absolute URL
 4. Translate titles to Chinese in-model
@@ -55,7 +55,6 @@ python3 scripts/extract_news.py --site reuters_china
 ```
 
 Default behavior:
-- `browser-use close`
 - `browser-use --browser real --headed open <url>`
 - `browser-use --browser real wait selector main` (retry once)
 - `browser-use --browser real eval '<adapter script>'`

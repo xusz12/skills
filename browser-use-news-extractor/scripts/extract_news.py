@@ -2,11 +2,10 @@
 """Extract Reuters China news rows via browser-use and write normalized JSON.
 
 Pipeline (fixed decisions):
-1) browser-use close
-2) browser-use --browser <mode> [--headed] open <url>
-3) browser-use --browser <mode> [--headed] wait selector main (retry once)
-4) browser-use --browser <mode> [--headed] eval <adapter script>
-5) normalize + dedupe by URL + keep top N
+1) browser-use --browser <mode> [--headed] open <url>
+2) browser-use --browser <mode> [--headed] wait selector main (retry once)
+3) browser-use --browser <mode> [--headed] eval <adapter script>
+4) normalize + dedupe by URL + keep top N
 
 V1 supports: reuters_china
 """
@@ -263,8 +262,6 @@ def main() -> int:
     top = max(1, args.top)
 
     try:
-        run_command(["browser-use", "close"], allow_fail=True)
-
         base = command_base(args.browser_mode, args.headed)
         run_command(base + ["open", target_url])
 
