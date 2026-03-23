@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract Reuters China news rows via browser-use and write normalized JSON.
+"""Extract Reuters section news rows via browser-use and write normalized JSON.
 
 Pipeline (fixed decisions):
 1) browser-use --browser <mode> [--headed] open <url>
@@ -7,7 +7,12 @@ Pipeline (fixed decisions):
 3) browser-use --browser <mode> [--headed] eval <adapter script>
 4) normalize + dedupe by URL + keep top N
 
-V1 supports: reuters_china
+Supported default Reuters sites:
+- reuters_china
+- reuters_world
+- reuters_middle_east
+- reuters_business
+- reuters_technology
 """
 
 from __future__ import annotations
@@ -15,7 +20,6 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
-import re
 import subprocess
 import sys
 import time
@@ -24,10 +28,7 @@ from urllib.parse import urlparse
 
 DEFAULT_TIME_TEXT = "页面未显示"
 
-ADAPTERS: dict[str, dict[str, str]] = {
-    "reuters_china": {
-        "default_url": "https://www.reuters.com/world/china/",
-        "eval_js": r'''(() => {
+REUTERS_EVAL_JS = r'''(() => {
   const clean = (s) => (s || "").replace(/\s+/g, " ").trim();
   const isTitle = (t) => t && t.length > 20 && !/^report ad$/i.test(t) && !t.startsWith("<img");
   const toAbs = (href) => {
@@ -119,7 +120,27 @@ ADAPTERS: dict[str, dict[str, str]] = {
   }
 
   return JSON.stringify(rows);
-})()''',
+})()'''
+ADAPTERS: dict[str, dict[str, str]] = {
+    "reuters_china": {
+        "default_url": "https://www.reuters.com/world/china/",
+        "eval_js": REUTERS_EVAL_JS,
+    },
+    "reuters_world": {
+        "default_url": "https://www.reuters.com/world/",
+        "eval_js": REUTERS_EVAL_JS,
+    },
+    "reuters_middle_east": {
+        "default_url": "https://www.reuters.com/world/middle-east/",
+        "eval_js": REUTERS_EVAL_JS,
+    },
+    "reuters_business": {
+        "default_url": "https://www.reuters.com/business/",
+        "eval_js": REUTERS_EVAL_JS,
+    },
+    "reuters_technology": {
+        "default_url": "https://www.reuters.com/technology/",
+        "eval_js": REUTERS_EVAL_JS,
     }
 }
 
@@ -138,8 +159,25 @@ def is_absolute_http_url(value: str) -> bool:
     return p.scheme in {"http", "https"} and bool(p.netloc)
 
 
-def run_command(cmd: list[str], allow_fail: bool = False) -> subprocess.CompletedProcess[str]:
-    cp = subprocess.run(cmd, text=True, capture_output=True)
+def run_command(
+    cmd: list[str],
+    allow_fail: bool = False,
+    timeout_sec: float | None = None,
+) -> subprocess.CompletedProcess[str]:
+    try:
+        cp = subprocess.run(cmd, text=True, capture_output=True, timeout=timeout_sec)
+    except subprocess.TimeoutExpired as exc:
+        if allow_fail:
+            return subprocess.CompletedProcess(
+                args=cmd,
+                returncode=124,
+                stdout=exc.stdout or "",
+                stderr=exc.stderr or "",
+            )
+        raise RuntimeError(
+            f"command timed out after {timeout_sec}s: {' '.join(cmd)}"
+        ) from exc
+
     if cp.returncode != 0 and not allow_fail:
         stderr = cp.stderr.strip() or cp.stdout.strip()
         raise RuntimeError(f"command failed ({cp.returncode}): {' '.join(cmd)}\n{stderr}")
@@ -165,7 +203,11 @@ def parse_eval_result(stdout: str) -> object:
 def wait_for_main(base_cmd: list[str], retries: int = 1) -> bool:
     attempts = retries + 1
     for idx in range(attempts):
-        cp = run_command(base_cmd + ["wait", "selector", "main"], allow_fail=True)
+        cp = run_command(
+            base_cmd + ["wait", "selector", "main"],
+            allow_fail=True,
+            timeout_sec=20,
+        )
         if cp.returncode == 0 and "found: True" in cp.stdout:
             return True
         if idx < attempts - 1:
@@ -203,7 +245,7 @@ def normalize_rows(
             continue
 
         host = urlparse(url).hostname or ""
-        if site == "reuters_china" and "reuters.com" not in host:
+        if site.startswith("reuters_") and "reuters.com" not in host:
             warnings.append(f"row {idx}: non-reuters url skipped")
             continue
 
@@ -236,7 +278,7 @@ def build_default_output(site: str) -> Path:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Extract Reuters China news rows via browser-use.")
+    parser = argparse.ArgumentParser(description="Extract Reuters section news rows via browser-use.")
     parser.add_argument("--site", choices=sorted(ADAPTERS.keys()), default="reuters_china")
     parser.add_argument("--url", default=None, help="Override site default URL")
     parser.add_argument("--top", type=int, default=10, help="Keep top N rows after normalization")
@@ -263,7 +305,7 @@ def main() -> int:
 
     try:
         base = command_base(args.browser_mode, args.headed)
-        run_command(base + ["open", target_url])
+        run_command(base + ["open", target_url], timeout_sec=45)
 
         if not wait_for_main(base, retries=1):
             print("ERROR: failed to detect main content after retries", file=sys.stderr)
@@ -271,7 +313,11 @@ def main() -> int:
 
         raw_rows: object | None = None
         for attempt in range(2):
-            cp = run_command(base + ["eval", site_conf["eval_js"]], allow_fail=True)
+            cp = run_command(
+                base + ["eval", site_conf["eval_js"]],
+                allow_fail=True,
+                timeout_sec=45,
+            )
             if cp.returncode != 0:
                 if attempt == 0:
                     time.sleep(2)

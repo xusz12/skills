@@ -1,6 +1,6 @@
 ---
 name: browser-use-news-extractor
-description: Extract news data with browser-use using a deterministic pipeline and export JSON plus Markdown. Use when the user needs headline/time/url extraction from Reuters China now, and a site-adapter structure that can be extended to additional news sites later.
+description: Extract news data with browser-use using a deterministic pipeline and export JSON plus Markdown. Use when the user needs headline/time/url extraction from Reuters section pages (China, World, Middle East, Business, Technology) with a site-adapter structure that can be extended later.
 ---
 
 # Browser-use News Extractor
@@ -14,8 +14,12 @@ Run a low-decision, repeatable pipeline:
 
 ## Scope (V1)
 
-- Implement only `reuters_china` adapter by default.
-- Default URL: `https://www.reuters.com/world/china/`.
+- Implement Reuters section adapters with shared extraction template:
+  - `reuters_china` -> `https://www.reuters.com/world/china/`
+  - `reuters_world` -> `https://www.reuters.com/world/`
+  - `reuters_middle_east` -> `https://www.reuters.com/world/middle-east/`
+  - `reuters_business` -> `https://www.reuters.com/business/`
+  - `reuters_technology` -> `https://www.reuters.com/technology/`
 - Keep architecture adapter-based so new sites can be added without changing the core flow.
 
 ## Required Output
@@ -54,9 +58,18 @@ Run:
 python3 scripts/extract_news.py --site reuters_china
 ```
 
+Other default sites:
+
+```bash
+python3 scripts/extract_news.py --site reuters_world
+python3 scripts/extract_news.py --site reuters_middle_east
+python3 scripts/extract_news.py --site reuters_business
+python3 scripts/extract_news.py --site reuters_technology
+```
+
 Default behavior:
 - `browser-use --browser real --headed open <url>`
-- `browser-use --browser real wait selector main` (retry once)
+- `browser-use --browser real wait selector main` (single wait capped with timeout, retry once)
 - `browser-use --browser real eval '<adapter script>'`
 - Validate absolute URL, dedupe by URL, preserve order, keep top 10
 - If fewer than 10 rows are available, continue and report warning
@@ -65,8 +78,8 @@ Optional parameters:
 
 ```bash
 python3 scripts/extract_news.py \
-  --site reuters_china \
-  --url https://www.reuters.com/world/china/ \
+  --site reuters_world \
+  --url https://www.reuters.com/world/ \
   --top 10 \
   --browser-mode real \
   --headed \

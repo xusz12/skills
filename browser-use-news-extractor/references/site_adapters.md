@@ -39,11 +39,19 @@ The JavaScript must return JSON serializable output in one of these shapes:
 5. Avoid ad/noise content (`Report Ad`, image placeholders, empty titles).
 6. Preserve page order before normalization.
 
-## Reuters China notes (V1)
+## Reuters section adapters (V1 defaults)
 
-- URL: `https://www.reuters.com/world/china/`
-- Stable extraction anchor is usually `main time` + nearby headline links.
-- Fallback pass scans Reuters article URLs with date suffix (`.../YYYY-MM-DD/`).
+Default Reuters adapters:
+- `reuters_china`: `https://www.reuters.com/world/china/`
+- `reuters_world`: `https://www.reuters.com/world/`
+- `reuters_middle_east`: `https://www.reuters.com/world/middle-east/`
+- `reuters_business`: `https://www.reuters.com/business/`
+- `reuters_technology`: `https://www.reuters.com/technology/`
+
+Observed structure differences exist (for example `time` parent tags can be `LI`/`DIV`/`SPAN`), but the same Reuters extraction template is reusable because all sections expose:
+- `main` as primary content root
+- news links in `a[href]` with Reuters date-suffixed article URLs (`...-YYYY-MM-DD/`)
+- usable time signals via nearby `time` nodes and card text fallback
 
 ## How to add a new site
 
