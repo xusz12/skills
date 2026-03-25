@@ -1,4 +1,0 @@
-interface:
-  display_name: "Browser-use News Extractor"
-  short_description: "Extract Reuters section news to JSON and Markdown"
-  default_prompt: "Use browser-use in real headed mode to extract Reuters headline data (title_source, time_text, datetime_iso, url) from one of the default site keys: reuters_china, reuters_world, reuters_middle_east, reuters_business, or reuters_technology. Normalize and dedupe by URL, keep top 10, translate titles to Chinese, then run scripts/postprocess_news.py to export timestamped JSON and Markdown. In Markdown, render 发布时间 as local time in YYYY-MM-DD HH:mm from datetime_iso when available, and do not show a separate ISO line."
