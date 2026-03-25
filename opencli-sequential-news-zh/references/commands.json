@@ -65,18 +65,6 @@
     ]
   },
   {
-    "section": "bloomberg",
-    "command": [
-      "opencli",
-      "BloombergBrowser",
-      "news",
-      "--limit",
-      "15",
-      "--format",
-      "json"
-    ]
-  },
-  {
     "section": "bbc_news",
     "command": [
       "opencli",
