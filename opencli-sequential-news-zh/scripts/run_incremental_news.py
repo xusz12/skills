@@ -23,6 +23,17 @@ def escape_md_title(title: str) -> str:
     return title.replace("[", "\\[").replace("]", "\\]")
 
 
+def render_blockquote(text: str) -> list[str]:
+    lines: list[str] = []
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip()
+        if line:
+            lines.append(f"> {line}")
+        else:
+            lines.append(">")
+    return lines if lines else [">"]
+
+
 def load_json_file(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -63,13 +74,27 @@ def normalize_item(item: Any) -> dict[str, str] | None:
     if not title:
         title = raw_title
 
-    return {
+    quoted_text_raw = str(item.get("quoted_text_raw", item.get("quoted_text", ""))).strip()
+    quoted_text = str(item.get("quoted_text", quoted_text_raw)).strip()
+    author_name = str(item.get("author_name", "")).strip()
+    author_screen_name = str(item.get("author_screen_name", "")).strip()
+
+    payload = {
         "section": section,
         "title": title,
         "raw_title": raw_title,
         "time": normalize_time(item.get("time")),
         "url": url,
     }
+    if quoted_text_raw:
+        payload["quoted_text_raw"] = quoted_text_raw
+    if quoted_text:
+        payload["quoted_text"] = quoted_text
+    if author_name:
+        payload["author_name"] = author_name
+    if author_screen_name:
+        payload["author_screen_name"] = author_screen_name
+    return payload
 
 
 def normalize_error(error: Any) -> dict[str, str] | None:
@@ -206,6 +231,9 @@ def build_markdown(
         lines.append("")
         for item in section_items:
             lines.append(f"### [{escape_md_title(item['title'])}]({item['url']})")
+            quoted_text = str(item.get("quoted_text", "")).strip()
+            if quoted_text:
+                lines.extend(render_blockquote(quoted_text))
             lines.append(f"- 发布时间：{item['time']}")
             lines.append("")
 
@@ -226,30 +254,71 @@ def build_markdown(
     return "\n".join(lines).rstrip() + "\n"
 
 
-def get_translation_map(path: Path) -> dict[str, str]:
+def get_translation_map(path: Path) -> dict[str, dict[str, str]]:
     raw = load_json_file(path)
     if not isinstance(raw, dict):
         raise ValueError("translated-json must contain an object like {\"url\": \"translated title\"}")
 
-    mapping: dict[str, str] = {}
-    for url, title in raw.items():
+    mapping: dict[str, dict[str, str]] = {}
+    for url, value in raw.items():
         url_text = str(url).strip()
-        title_text = str(title).strip()
-        if not url_text or not title_text:
+        if not url_text:
             continue
-        mapping[url_text] = title_text
+        if isinstance(value, str):
+            title_text = value.strip()
+            if not title_text:
+                continue
+            mapping[url_text] = {"title": title_text}
+            continue
+        if isinstance(value, dict):
+            title_text = str(value.get("title", "")).strip()
+            quoted_text = str(value.get("quoted_text", "")).strip()
+            quoted_text_zh = str(value.get("quoted_text_zh", "")).strip()
+            if not title_text and not quoted_text and not quoted_text_zh:
+                continue
+            payload: dict[str, str] = {}
+            if title_text:
+                payload["title"] = title_text
+            if quoted_text:
+                payload["quoted_text"] = quoted_text
+            if quoted_text_zh:
+                payload["quoted_text_zh"] = quoted_text_zh
+            mapping[url_text] = payload
+            continue
     return mapping
 
 
-def finalize_item(item: dict[str, str], translations: dict[str, str]) -> dict[str, str]:
-    title = translations.get(item["url"], "").strip() or item["raw_title"]
-    return {
+def finalize_item(item: dict[str, str], translations: dict[str, dict[str, str]]) -> dict[str, str]:
+    translated = translations.get(item["url"], {})
+    title = str(translated.get("title", "")).strip() or item["raw_title"]
+    quoted_text_raw = str(item.get("quoted_text_raw", item.get("quoted_text", ""))).strip()
+    quoted_text_direct = str(translated.get("quoted_text", "")).strip()
+    quoted_text_zh = str(translated.get("quoted_text_zh", "")).strip()
+
+    if quoted_text_direct:
+        quoted_text = quoted_text_direct
+    elif quoted_text_raw and quoted_text_zh:
+        quoted_text = f"{quoted_text_raw}\n{quoted_text_zh}"
+    elif quoted_text_zh:
+        quoted_text = quoted_text_zh
+    else:
+        quoted_text = quoted_text_raw
+
+    result = {
         "section": item["section"],
         "title": title,
         "raw_title": item["raw_title"],
         "time": item["time"],
         "url": item["url"],
     }
+    if quoted_text:
+        result["quoted_text"] = quoted_text
+        result["quoted_text_raw"] = quoted_text_raw or quoted_text
+    if item.get("author_name"):
+        result["author_name"] = str(item.get("author_name", "")).strip()
+    if item.get("author_screen_name"):
+        result["author_screen_name"] = str(item.get("author_screen_name", "")).strip()
+    return result
 
 
 def state_path_for_date(state_dir: Path, date_text: str) -> Path:

@@ -1,5 +1,16 @@
 [
   {
+    "section": "seekinganythingbutalpha",
+    "command": [
+      "twitter",
+      "user-posts",
+      "ivanalog_com",
+      "-n",
+      "10",
+      "--json"
+    ]
+  },
+  {
     "section": "middle-east",
     "command": [
       "opencli",

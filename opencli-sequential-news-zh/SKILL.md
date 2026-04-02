@@ -50,12 +50,18 @@ python3 /Users/x/.codex/skills/opencli-sequential-news-zh/scripts/run_incrementa
 7. Translate titles into Chinese in-model:
    - Translate only `items_to_translate`.
    - Translation must stay in the model, not inside any script.
-   - Write a JSON object mapping URL to translated title into `$TRANSLATED_JSON_PATH`, for example:
+   - Write a JSON object into `$TRANSLATED_JSON_PATH`:
+     - Legacy format (still supported): map URL to translated title string.
+     - Extended format (recommended for Twitter quote support): map URL to object with `title` and optional quote fields.
    - If `items_to_translate` is empty, still write `{}` to `$TRANSLATED_JSON_PATH`.
 
 ```json
 {
-  "https://example.com/story": "中文标题"
+  "https://example.com/story": "中文标题",
+  "https://x.com/ivanalog_com/status/123?s=20": {
+    "title": "中文正文标题",
+    "quoted_text_zh": "引用推文中文翻译"
+  }
 }
 ```
 
@@ -121,6 +127,12 @@ Constraints:
 - Global dedupe key is absolute URL exact match.
 - Daily filtering removes yesterday's URLs.
 - Per-run filtering removes yesterday's URLs and URLs seen earlier the same day.
+- Twitter (`twitter user-posts --json`) is supported:
+  - `text` -> output title.
+  - `author.name` can be used as `section` via commands config.
+  - URL auto-generated as `https://x.com/{screenName}/status/{id}?s=20`.
+  - `createdAtLocal` -> 发布时间.
+  - `quotedTweet.text` renders as blockquote (if translated quote text exists, rendered together).
 - Add final block:
 
 ```markdown

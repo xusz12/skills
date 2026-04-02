@@ -76,6 +76,26 @@ def parse_json_array(stdout_text: str) -> list[dict[str, Any]]:
     raise ValueError("stdout does not contain a valid JSON array")
 
 
+def parse_json_items(stdout_text: str) -> list[dict[str, Any]]:
+    text = stdout_text.strip()
+    if not text:
+        raise ValueError("empty stdout")
+
+    try:
+        data = json.loads(text)
+        if isinstance(data, list):
+            return [row for row in data if isinstance(row, dict)]
+        if isinstance(data, dict):
+            rows = data.get("data")
+            if isinstance(rows, list):
+                return [row for row in rows if isinstance(row, dict)]
+            raise ValueError("JSON object is missing list field 'data'")
+    except json.JSONDecodeError:
+        pass
+
+    return parse_json_array(stdout_text)
+
+
 def parse_command(raw_command: Any) -> list[str]:
     if isinstance(raw_command, list):
         parts = [str(part).strip() for part in raw_command]
@@ -91,6 +111,54 @@ def parse_command(raw_command: Any) -> list[str]:
         return parts
 
     raise ValueError("command must be list[str] or string")
+
+
+def compact_text(raw: Any) -> str:
+    text = str(raw or "").strip()
+    return " ".join(text.split())
+
+
+def normalize_row(section: str, row: dict[str, Any]) -> dict[str, str] | None:
+    title = str(row.get("title", "")).strip()
+    url = str(row.get("url", "")).strip()
+    if title and url:
+        return {
+            "section": section,
+            "title": title,
+            "time": normalize_time(row.get("time")),
+            "url": url,
+        }
+
+    tweet_id = str(row.get("id", "")).strip()
+    tweet_text = compact_text(row.get("text", ""))
+    author = row.get("author")
+    if isinstance(author, dict):
+        screen_name = str(author.get("screenName", "")).strip()
+        author_name = str(author.get("name", "")).strip()
+    else:
+        screen_name = ""
+        author_name = ""
+
+    if not tweet_id or not tweet_text:
+        return None
+
+    if not screen_name:
+        return None
+
+    quote_text = ""
+    quoted = row.get("quotedTweet")
+    if isinstance(quoted, dict):
+        quote_text = compact_text(quoted.get("text", ""))
+
+    return {
+        "section": section,
+        "title": tweet_text,
+        "time": normalize_time(row.get("createdAtLocal")),
+        "url": f"https://x.com/{screen_name}/status/{tweet_id}?s=20",
+        "author_name": author_name,
+        "author_screen_name": screen_name,
+        "quoted_text_raw": quote_text,
+    }
 
 
 def load_config(config_path: Path) -> list[dict[str, Any]]:
@@ -161,7 +229,7 @@ def run_pipeline(entries: list[dict[str, Any]], timeout_seconds: int) -> dict[st
             continue
 
         try:
-            rows = parse_json_array(proc.stdout)
+            rows = parse_json_items(proc.stdout)
         except Exception as exc:
             errors.append(
                 {
@@ -174,19 +242,10 @@ def run_pipeline(entries: list[dict[str, Any]], timeout_seconds: int) -> dict[st
             continue
 
         for row in rows:
-            title = str(row.get("title", "")).strip()
-            url = str(row.get("url", "")).strip()
-            if not title or not url:
+            normalized = normalize_row(section, row)
+            if normalized is None:
                 continue
-
-            section_items[section].append(
-                {
-                    "section": section,
-                    "title": title,
-                    "time": normalize_time(row.get("time")),
-                    "url": url,
-                }
-            )
+            section_items[section].append(normalized)
 
     seen_urls: set[str] = set()
     deduped_items: list[dict[str, str]] = []
