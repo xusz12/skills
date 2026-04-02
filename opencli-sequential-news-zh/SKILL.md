@@ -5,34 +5,53 @@ description: Run configurable opencli news commands sequentially, skip failed co
 
 # OpenCLI Sequential News ZH
 
+## Execution Mode (Rules Compatibility)
+
+- Execute each step as a direct command invocation (argv style).
+- Do not wrap the whole workflow into one `bash -lc` / `zsh -lc` script.
+- Do not rely on environment-variable expansion for script paths in the executed command.
+- Keep pipeline and incremental scripts invoked as literal absolute paths so `prefix_rule` can match reliably.
+
 ## Workflow
 
 1. Use current working directory as the output directory.
 2. Read command configuration:
    - Default: `references/commands.json` inside this skill.
    - Optional override: user-provided config path via `--config`.
-3. Run pipeline script sequentially:
+   - Resolve skill root absolute path from this skill file location:
+     - `/Users/x/.codex/skills/opencli-sequential-news-zh`
+3. Define shared working paths (must be reused in steps 4, 5, 7, and 8):
 
 ```bash
-python3 /Users/x/.codex/skills/opencli-sequential-news-zh/scripts/run_news_pipeline.py --config <commands.json> --out-json <tmp_json_path>
+WORKDIR=<absolute current working directory>
+STATE_DIR=<WORKDIR>/.news_state
+TMP_JSON_PATH=<STATE_DIR>/tmp_current.json
+INCREMENTAL_JSON_PATH=<STATE_DIR>/tmp_incremental.json
+TRANSLATED_JSON_PATH=<STATE_DIR>/tmp_translated.json
 ```
 
-4. Prepare incremental payload:
+4. Run pipeline script sequentially:
 
 ```bash
-python3 /Users/x/.codex/skills/opencli-sequential-news-zh/scripts/run_incremental_news.py prepare --current-json <tmp_json_path> --state-dir <state_dir> --out-json <incremental_json_path>
+python3 /Users/x/.codex/skills/opencli-sequential-news-zh/scripts/run_news_pipeline.py --config <commands.json> --out-json <TMP_JSON_PATH>
 ```
 
-5. Parse incremental JSON result:
+5. Prepare incremental payload:
+
+```bash
+python3 /Users/x/.codex/skills/opencli-sequential-news-zh/scripts/run_incremental_news.py prepare --current-json <TMP_JSON_PATH> --state-dir <STATE_DIR> --out-json <INCREMENTAL_JSON_PATH>
+```
+
+6. Parse incremental JSON result:
    - `run_fresh_items_raw`: this run's fresh stories after removing yesterday URLs and earlier same-day URLs.
-   - `daily_fresh_items_raw`: today's cumulative fresh stories after removing yesterday URLs.
    - `items_to_translate`: stories whose titles still need model translation for display.
    - `current_run_errors`: failed commands from this run.
    - `daily_errors`: accumulated failed commands for the current day.
-6. Translate titles into Chinese in-model:
+7. Translate titles into Chinese in-model:
    - Translate only `items_to_translate`.
    - Translation must stay in the model, not inside any script.
-   - Write a JSON object mapping URL to translated title, for example:
+   - Write a JSON object mapping URL to translated title into `$TRANSLATED_JSON_PATH`, for example:
+   - If `items_to_translate` is empty, still write `{}` to `$TRANSLATED_JSON_PATH`.
 
 ```json
 {
@@ -40,17 +59,32 @@ python3 /Users/x/.codex/skills/opencli-sequential-news-zh/scripts/run_incrementa
 }
 ```
 
-7. Finalize outputs:
+8. Finalize outputs:
 
 ```bash
-python3 /Users/x/.codex/skills/opencli-sequential-news-zh/scripts/run_incremental_news.py finalize --incremental-json <incremental_json_path> --translated-json <translated_json_path> --state-dir <state_dir> --out-dir <current_working_directory>
+python3 /Users/x/.codex/skills/opencli-sequential-news-zh/scripts/run_incremental_news.py finalize --incremental-json <INCREMENTAL_JSON_PATH> --translated-json <TRANSLATED_JSON_PATH> --state-dir <STATE_DIR> --out-dir <WORKDIR>
 ```
 
-8. Finalize writes exactly two user-facing Markdown files:
+9. Finalize writes exactly two user-facing Markdown files:
    - `YYYY-MM-DD_dailyFreshNews.md`: one rolling summary file per day.
    - `YYYY-MM-DD-HH-mm_freshNews.md`: one per-run fresh-news file.
    - Timezone: `Asia/Shanghai` unless user explicitly requests another timezone.
-9. Hidden state is stored separately in the state directory, one JSON file per day.
+10. Hidden state is stored separately in the state directory, one JSON file per day.
+
+## State Schema Notes
+
+- Daily state file path: `<STATE_DIR>/YYYY-MM-DD.json`.
+- Top-level keys are daily aggregates and metadata, for example:
+  - `date`, `timezone`, `section_order`
+  - `today_seen_urls`, `today_first_seen_items`
+  - `daily_errors`
+  - `runs` (array of per-run summaries)
+- Per-run counters are stored under `runs[-1]` (latest run), not at top level.
+  - Read `runs[-1].run_fresh_count` for this run's fresh count.
+  - Read `runs[-1].daily_fresh_count` for current day cumulative fresh count.
+  - Read `runs[-1].error_count` for this run error count.
+  - Read `runs[-1].run_fresh_path` / `runs[-1].daily_fresh_path` for output files.
+- If `runs` is empty, treat run-level stats as unavailable rather than `0`.
 
 ## commands.json Format
 

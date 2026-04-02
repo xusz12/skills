@@ -189,18 +189,6 @@ def load_state(state_path: Path, date_text: str, timezone_name: str) -> dict[str
     }
 
 
-def unique_items_in_order(items: list[dict[str, str]]) -> list[dict[str, str]]:
-    result: list[dict[str, str]] = []
-    seen_urls: set[str] = set()
-    for item in items:
-        url = item["url"]
-        if url in seen_urls:
-            continue
-        seen_urls.add(url)
-        result.append(item)
-    return result
-
-
 def build_markdown(
     section_order: list[str],
     items: list[dict[str, str]],
@@ -331,18 +319,10 @@ def prepare_incremental(args: argparse.Namespace) -> int:
         item for item in current_run_first_seen_items_raw if item["url"] not in yesterday_urls
     ]
 
-    previous_daily_fresh_items_raw = [
-        {
-            "section": item["section"],
-            "title": item["raw_title"],
-            "raw_title": item["raw_title"],
-            "time": item["time"],
-            "url": item["url"],
-        }
-        for item in today_state["today_first_seen_items"]
-        if item["url"] not in yesterday_urls
-    ]
-    daily_fresh_items_raw = unique_items_in_order(previous_daily_fresh_items_raw + run_fresh_items_raw)
+    daily_fresh_urls = {
+        item["url"] for item in today_state["today_first_seen_items"] if item["url"] not in yesterday_urls
+    }
+    daily_fresh_urls.update(item["url"] for item in run_fresh_items_raw)
 
     daily_errors = today_state["daily_errors"] + current_errors
 
@@ -355,7 +335,6 @@ def prepare_incremental(args: argparse.Namespace) -> int:
         "current_run_items_raw": current_items,
         "current_run_first_seen_items_raw": current_run_first_seen_items_raw,
         "run_fresh_items_raw": run_fresh_items_raw,
-        "daily_fresh_items_raw": daily_fresh_items_raw,
         "current_run_errors": current_errors,
         "daily_errors": daily_errors,
         "items_to_translate": run_fresh_items_raw,
@@ -367,7 +346,7 @@ def prepare_incremental(args: argparse.Namespace) -> int:
             "current_run_count": len(current_items),
             "current_run_first_seen_count": len(current_run_first_seen_items_raw),
             "run_fresh_count": len(run_fresh_items_raw),
-            "daily_fresh_count": len(daily_fresh_items_raw),
+            "daily_fresh_count": len(daily_fresh_urls),
             "current_error_count": len(current_errors),
             "daily_error_count": len(daily_errors),
         },
