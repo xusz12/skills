@@ -225,7 +225,7 @@ def main() -> int:
 
     parser.add_argument("--config", default=str(default_config), help="Path to commands.json")
     parser.add_argument("--out-json", default="", help="Optional output JSON path")
-    parser.add_argument("--timeout", type=int, default=180, help="Per-command timeout seconds")
+    parser.add_argument("--timeout", type=int, default=300, help="Per-command timeout seconds")
     parser.add_argument("--timezone", default="Asia/Shanghai", help="Timezone for generated_at")
 
     args = parser.parse_args()
