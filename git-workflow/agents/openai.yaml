@@ -1,4 +1,0 @@
-interface:
-  display_name: "Git Workflow"
-  short_description: "规范化 Git 日常协作流程：分支、提交、推送、合并"
-  default_prompt: "Use this skill to execute safe and consistent Git collaboration workflows with clear branch strategy and commit hygiene."
