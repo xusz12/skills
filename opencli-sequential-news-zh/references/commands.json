@@ -1,5 +1,29 @@
 [
   {
+    "section": "Ilya Sutskever",
+    "command": [
+      "twitter",
+      "user-posts",
+      "ilyasut",
+      "-n",
+      "10",
+      "--full-text",
+      "--json"
+    ]
+  },
+  {
+    "section": "郭明錤",
+    "command": [
+      "twitter",
+      "user-posts",
+      "mingchikuo",
+      "-n",
+      "10",
+      "--full-text",
+      "--json"
+    ]
+  },
+  {
     "section": "seekinganythingbutalpha",
     "command": [
       "twitter",
@@ -7,6 +31,55 @@
       "ivanalog_com",
       "-n",
       "10",
+      "--full-text",
+      "--json"
+    ]
+  },
+  {
+    "section": "外汇交易员",
+    "command": [
+      "twitter",
+      "user-posts",
+      "fxtrader",
+      "-n",
+      "10",
+      "--full-text",
+      "--json"
+    ]
+  },
+  {
+    "section": "Time Horizon",
+    "command": [
+      "twitter",
+      "user-posts",
+      "Time_HorizonX",
+      "-n",
+      "10",
+      "--full-text",
+      "--json"
+    ]
+  },
+  {
+    "section": "数字游民Jarod",
+    "command": [
+      "twitter",
+      "user-posts",
+      "jarodise",
+      "-n",
+      "10",
+      "--full-text",
+      "--json"
+    ]
+  },
+  {
+    "section": "卡比卡比",
+    "command": [
+      "twitter",
+      "user-posts",
+      "jakevin7",
+      "-n",
+      "10",
+      "--full-text",
       "--json"
     ]
   },

@@ -132,7 +132,9 @@ Constraints:
   - `author.name` can be used as `section` via commands config.
   - URL auto-generated as `https://x.com/{screenName}/status/{id}?s=20`.
   - `createdAtLocal` -> 发布时间.
-  - `quotedTweet.text` renders as blockquote (if translated quote text exists, rendered together).
+  - `quotedTweet.text` renders as blockquote.
+  - If `quoted_text_zh` is provided, only Chinese quote text is rendered (no bilingual block).
+  - Recommended translation policy: only translate non-Chinese text.
 - Add final block:
 
 ```markdown

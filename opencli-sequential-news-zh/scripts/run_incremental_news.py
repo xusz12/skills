@@ -297,8 +297,6 @@ def finalize_item(item: dict[str, str], translations: dict[str, dict[str, str]])
 
     if quoted_text_direct:
         quoted_text = quoted_text_direct
-    elif quoted_text_raw and quoted_text_zh:
-        quoted_text = f"{quoted_text_raw}\n{quoted_text_zh}"
     elif quoted_text_zh:
         quoted_text = quoted_text_zh
     else:
