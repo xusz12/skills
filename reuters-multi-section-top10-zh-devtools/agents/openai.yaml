@@ -1,7 +1,0 @@
-interface:
-  display_name: "reuters-multi-section-top10-zh-devtools"
-  short_description: "Collect Reuters/BBC/Ars/TechCrunch top stories, dedupe, export Markdown"
-  default_prompt: "Use Chrome DevTools to fetch multiple news URLs. Default URLs are: https://www.reuters.com/technology/, https://www.reuters.com/business/, https://www.reuters.com/world/, https://www.reuters.com/world/china/, https://www.bbc.com/news, https://arstechnica.com/, and https://techcrunch.com/latest/. Process URLs sequentially in visible-browser mode (browser UI enabled). For each URL, extract up to 10 visible stories in page order, keep time exactly as shown (use 页面未显示 when missing), and translate titles into Chinese. Derive section keys as defined in SKILL.md. Before export, deduplicate globally by absolute URL and keep first occurrence order. Export grouped Markdown only to the current project folder using filename format yyyy-mm-dd-hh-mm_news.md. Do not print the full Markdown content in chat; only report completion and file path. Before final completion, close Chrome DevTools pages/session."
-
-policy:
-  allow_implicit_invocation: true
