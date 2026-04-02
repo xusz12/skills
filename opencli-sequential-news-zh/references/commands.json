@@ -84,6 +84,18 @@
     ]
   },
   {
+    "section": "Aelia Capitolina",
+    "command": [
+      "twitter",
+      "user-posts",
+      "Areskapitalon",
+      "-n",
+      "10",
+      "--full-text",
+      "--json"
+    ]
+  },
+  {
     "section": "middle-east",
     "command": [
       "opencli",
